@@ -62,20 +62,20 @@ serving current %s at %s
 
 - get file %s/foo/bar:
 
-    curl -O %s%s/foo/bar
+    curl -O %s/foo/bar
 
 - delete file %s/foo/bar:
 
-    curl -XDELETE %s%s/foo/bar
+    curl -XDELETE %s/foo/bar
 
 - upload file to %s/foo/bar:
 
-    curl -T /tmp/file %s%s/foo/bar
+    curl -T /tmp/file %s/foo/bar
 
 `, *dirParam, *portParam,
-		*dirParam, *portParam, *dirParam,
-		*dirParam, *portParam, *dirParam,
-		*dirParam, *portParam, *dirParam)
+		*dirParam, *portParam,
+		*dirParam, *portParam,
+		*dirParam, *portParam)
 
 	dir := dirServer(*dirParam)
 
