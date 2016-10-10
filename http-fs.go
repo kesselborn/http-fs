@@ -68,7 +68,7 @@ serving current %s at %s
 
     curl -XDELETE %s/foo/bar
 
-- upload file to %s/foo/bar:
+- upload file '/tmp/file' to %s/foo/bar:
 
     curl -T /tmp/file %s/foo/bar
 
