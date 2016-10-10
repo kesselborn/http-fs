@@ -26,7 +26,7 @@ func (s dirServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		http.FileServer(http.Dir(s)).ServeHTTP(w, r)
 	case "DELETE":
-		if err := os.Remove(string(s) + r.URL.Path); err != nil {
+		if err := os.RemoveAll(string(s) + r.URL.Path); err != nil {
 			errorOut("error removing %s: %s", string(s)+r.URL.Path, err)
 			return
 		}
