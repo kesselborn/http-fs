@@ -5,11 +5,11 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"path"
-	"time"
 )
 
 type dirServer string
@@ -21,25 +21,34 @@ func (s dirServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, msg, http.StatusInternalServerError)
 	}
 
-	fmt.Printf("%s: got request to %s\n", time.Now(), r.URL.Path)
+	logMsg := func(method string) {
+		log.Printf("%-40s| header: %s\n", method+" "+r.URL.Path, r.Header)
+	}
+
 	switch r.Method {
 	case "GET":
+		logMsg("GET")
 		http.FileServer(http.Dir(s)).ServeHTTP(w, r)
 	case "DELETE":
-		if err := os.RemoveAll(string(s) + r.URL.Path); err != nil {
-			errorOut("error removing %s: %s", string(s)+r.URL.Path, err)
+		logMsg("DELETE")
+		fileOrDir := string(s) + path.Dir(r.URL.Path)
+		if err := os.RemoveAll(fileOrDir); err != nil {
+			errorOut("error removing %s: %s", fileOrDir, err)
 			return
 		}
 
-		fmt.Fprintf(w, http.StatusText(204))
+		fmt.Fprintf(w, http.StatusText(204)+"\n")
 	case "PUT":
-		if err := os.MkdirAll(string(s)+path.Dir(r.URL.Path), 0755); err != nil {
-			errorOut("error creating dir %s: %s", path.Dir(r.URL.Path), err)
+		logMsg("PUT")
+		dir := string(s) + path.Dir(r.URL.Path)
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			errorOut("error creating dir %s: %s", dir, err)
 			return
 		}
-		f, err := os.Create(string(s) + r.URL.Path)
+
+		f, err := ioutil.TempFile(dir, "upload-blob.")
 		if err != nil {
-			errorOut("error creating dir %s: %s", path.Dir(r.URL.Path), err)
+			errorOut("error creating dir temporary file: %s", err)
 			return
 		}
 		defer f.Close()
@@ -49,12 +58,17 @@ func (s dirServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		fmt.Fprintf(w, http.StatusText(201))
+		if err := os.Rename(f.Name(), string(s)+r.URL.Path); err != nil {
+			errorOut("error storing file %s: %s", f.Name(), err)
+			return
+		}
+
+		fmt.Fprintf(w, http.StatusText(201)+"\n")
 	}
 }
 
 func main() {
-	portParam := flag.String("addr", "localhost:8080", "where to listen for connection")
+	addrParam := flag.String("addr", "localhost:8080", "where to listen for connection")
 	dirParam := flag.String("dir", ".", "which directory to take as a root")
 	flag.Parse()
 	fmt.Printf(`
@@ -72,12 +86,12 @@ serving current %s at %s
 
     curl -T /tmp/file %s/foo/bar
 
-`, *dirParam, *portParam,
-		*dirParam, *portParam,
-		*dirParam, *portParam,
-		*dirParam, *portParam)
+`, *dirParam, *addrParam,
+		*dirParam, *addrParam,
+		*dirParam, *addrParam,
+		*dirParam, *addrParam)
 
 	dir := dirServer(*dirParam)
 
-	panic(http.ListenAndServe(*portParam, dir))
+	panic(http.ListenAndServe(*addrParam, dir))
 }
