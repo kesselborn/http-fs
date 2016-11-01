@@ -22,7 +22,7 @@ func (s dirServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logMsg := func(method string) {
-		log.Printf("%-40s| header: %s\n", method+" "+r.URL.Path, r.Header)
+		log.Printf("%-60s| header: %s\n", method+" "+r.URL.Path, r.Header)
 	}
 
 	switch r.Method {
