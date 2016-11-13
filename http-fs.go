@@ -31,13 +31,13 @@ func (s dirServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.FileServer(http.Dir(s)).ServeHTTP(w, r)
 	case "DELETE":
 		logMsg("DELETE")
-		fileOrDir := string(s) + path.Dir(r.URL.Path)
+		fileOrDir := path.Join(string(s), r.URL.Path)
 		if err := os.RemoveAll(fileOrDir); err != nil {
 			errorOut("error removing %s: %s", fileOrDir, err)
 			return
 		}
 
-		fmt.Fprintf(w, http.StatusText(204)+"\n")
+		http.Error(w, http.StatusText(204), 204)
 	case "PUT":
 		logMsg("PUT")
 		dir := string(s) + path.Dir(r.URL.Path)
