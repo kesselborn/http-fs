@@ -47,15 +47,18 @@ it_should_correctly_delete_tree() {
   curl -T $0 localhost:${port}/${filename}1
   curl -T $0 localhost:${port}/${filename}2
   curl -T $0 localhost:${port}/${filename}3
+  curl -T $0 localhost:${port}/$(dirname ${filename})/foo
 
-  assert_match "$(curl -i -XDELETE localhost:${port}/$(dirname ${filename}))" "HTTP/1.1 204"
+  assert_match "$(curl -i -XDELETE localhost:${port}/$(dirname $(dirname ${filename})))" "HTTP/1.1 204"
 
   assert_match "$(curl -Li localhost:${port}/${filename}1)" "HTTP/1.1 404 Not Found"
   assert_match "$(curl -Li localhost:${port}/${filename}2)" "HTTP/1.1 404 Not Found"
   assert_match "$(curl -Li localhost:${port}/${filename}3)" "HTTP/1.1 404 Not Found"
-
+  assert_match "$(curl -Li localhost:${port}/$(dirname ${filename})/foo)" "HTTP/1.1 404 Not Found"
   assert_match "$(curl -Li localhost:${port}/$(dirname ${filename}))" "HTTP/1.1 404 Not Found"
-  assert_match "$(curl -Li localhost:${port}/$(dirname $(dirname ${filename})))" "HTTP/1.1 200"
+  assert_match "$(curl -Li localhost:${port}/$(dirname $(dirname ${filename})))"  "HTTP/1.1 404 Not Found"
+
+  assert_match "$(curl -Li localhost:${port}/$(dirname $(dirname $(dirname ${filename}))))" "HTTP/1.1 200"
 }
 
 
