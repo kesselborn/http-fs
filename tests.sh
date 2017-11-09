@@ -6,7 +6,7 @@ container_port() {
 
 before_all() {
   make docker-image
-  docker run -d --name http-fs-testing -p 8080 kesselborn/http-fs
+  docker run -d --name http-fs-testing -p 5000 kesselborn/http-fs
 }
 
 after_all() {
