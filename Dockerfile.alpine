@@ -1,4 +1,0 @@
-FROM alpine
-ADD http-fs-linux /http-fs
-EXPOSE 5000
-CMD ["/http-fs", "-addr=0.0.0.0:5000", "-dir=/tmp"]
