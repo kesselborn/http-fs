@@ -68,7 +68,7 @@ func (s dirServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	addrParam := flag.String("addr", "localhost:8080", "where to listen for connection")
+	addrParam := flag.String("addr", "0.0.0.0:8080", "where to listen for connection")
 	dirParam := flag.String("dir", ".", "which directory to take as a root")
 	flag.Parse()
 	fmt.Printf(`
