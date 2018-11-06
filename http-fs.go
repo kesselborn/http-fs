@@ -12,64 +12,99 @@ import (
 	"path"
 )
 
-type dirServer string
+/////////////////////////// 404 hack
 
-func (s dirServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	errorOut := func(format string, a ...interface{}) {
-		msg := fmt.Sprintf(format, a...)
-		log.Printf(msg)
-		http.Error(w, msg, http.StatusInternalServerError)
+type custom404 struct {
+	http.ResponseWriter
+	contentType string
+	content     string
+	is404       *bool
+}
+
+func (w custom404) WriteHeader(code int) {
+	if code == 404 {
+		w.Header().Set("Content-Type", w.contentType)
+		*w.is404 = true
+	}
+	w.ResponseWriter.WriteHeader(code)
+}
+
+func (w custom404) Write(b []byte) (int, error) {
+	if *w.is404 {
+		w.ResponseWriter.Write([]byte(w.content))
+		return len(b), nil
 	}
 
-	logMsg := func(method string) {
-		log.Printf("%-60s| header: %s\n", method+" "+r.URL.Path, r.Header)
-	}
+	return w.ResponseWriter.Write(b)
+}
 
-	switch r.Method {
-	case "GET":
-		logMsg("GET")
-		http.FileServer(http.Dir(s)).ServeHTTP(w, r)
-	case "DELETE":
-		logMsg("DELETE")
-		fileOrDir := path.Join(string(s), r.URL.Path)
-		if err := os.RemoveAll(fileOrDir); err != nil {
-			errorOut("error removing %s: %s", fileOrDir, err)
+/////////////////////////// 404 hack end
+
+func serve(dir string, readOnly bool) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		errorOut := func(format string, a ...interface{}) {
+			msg := fmt.Sprintf(format, a...)
+			log.Printf(msg)
+			http.Error(w, msg, http.StatusInternalServerError)
+		}
+
+		logMsg := func(method string) {
+			log.Printf("%-60s| header: %s\n", method+" "+r.URL.Path, r.Header)
+		}
+
+		if readOnly && r.Method != "GET" {
+			http.Error(w, "http-fs was started in read-only mode", 405)
 			return
 		}
 
-		http.Error(w, http.StatusText(204), 204)
-	case "PUT":
-		logMsg("PUT")
-		dir := string(s) + path.Dir(r.URL.Path)
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			errorOut("error creating dir %s: %s", dir, err)
-			return
-		}
+		switch r.Method {
+		case "GET":
+			logMsg("GET")
+			http.FileServer(http.Dir(dir)).ServeHTTP(custom404{ResponseWriter: w, contentType: "text/html; charset: utf-8", content: custom404Content, is404: new(bool)}, r)
+		case "DELETE":
+			logMsg("DELETE")
+			fileOrDir := path.Join(dir, r.URL.Path)
+			if err := os.RemoveAll(fileOrDir); err != nil {
+				errorOut("error removing %s: %s", fileOrDir, err)
+				return
+			}
 
-		f, err := ioutil.TempFile(dir, "upload-blob.")
-		if err != nil {
-			errorOut("error creating dir temporary file: %s", err)
-			return
-		}
-		defer f.Close()
+			http.Error(w, http.StatusText(204), 204)
+		case "PUT":
+			logMsg("PUT")
+			dir := dir + path.Dir(r.URL.Path)
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				errorOut("error creating dir %s: %s", dir, err)
+				return
+			}
 
-		if _, err := io.Copy(f, r.Body); err != nil {
-			errorOut("error storing file %s: %s", f.Name, err)
-			return
-		}
+			f, err := ioutil.TempFile(dir, "upload-blob.")
+			if err != nil {
+				errorOut("error creating dir temporary file: %s", err)
+				return
+			}
+			defer f.Close()
 
-		if err := os.Rename(f.Name(), string(s)+r.URL.Path); err != nil {
-			errorOut("error storing file %s: %s", f.Name(), err)
-			return
-		}
+			if _, err := io.Copy(f, r.Body); err != nil {
+				errorOut("error storing file %s: %s", f.Name, err)
+				return
+			}
 
-		fmt.Fprintf(w, http.StatusText(201)+"\n")
+			if err := os.Rename(f.Name(), dir+r.URL.Path); err != nil {
+				errorOut("error storing file %s: %s", f.Name(), err)
+				return
+			}
+
+			fmt.Fprintf(w, http.StatusText(201)+"\n")
+		}
 	}
 }
 
 func main() {
 	addrParam := flag.String("addr", "0.0.0.0:5000", "where to listen for connection")
-	dirParam := flag.String("dir", ".", "which directory to take as a root")
+	dir := flag.String("dir", ".", "which directory to take as a root")
+	readOnly := flag.Bool("read-only", false, "start server read only")
+
 	flag.Parse()
 	fmt.Printf(`
 serving current %s at %s
@@ -78,20 +113,19 @@ serving current %s at %s
 
     curl -O %s/foo/bar
 
-- delete file %s/foo/bar:
+- delete file %s/foo/bar (not available in read-only mode):
 
     curl -XDELETE %s/foo/bar
 
-- upload file '/tmp/file' to %s/foo/bar:
+- upload file '/tmp/file' to %s/foo/bar: (not available in read-only mode):
 
     curl -T /tmp/file %s/foo/bar
 
-`, *dirParam, *addrParam,
-		*dirParam, *addrParam,
-		*dirParam, *addrParam,
-		*dirParam, *addrParam)
+`, *dir, *addrParam,
+		*dir, *addrParam,
+		*dir, *addrParam,
+		*dir, *addrParam)
 
-	dir := dirServer(*dirParam)
-
-	panic(http.ListenAndServe(*addrParam, dir))
+	http.HandleFunc("/", serve(*dir, *readOnly))
+	panic(http.ListenAndServe(*addrParam, nil))
 }
