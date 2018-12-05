@@ -105,6 +105,7 @@ func main() {
 	addr_param := flag.String("addr", "0.0.0.0:5000", "where to listen for connection")
 	dir := flag.String("dir", ".", "which directory to take as a root")
 	read_only := flag.Bool("read-only", false, "start server read only")
+	// hallo
 
 	flag.Parse()
 	fmt.Printf(`
