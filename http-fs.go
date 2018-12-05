@@ -102,7 +102,7 @@ func serve(dir string, readOnly bool) func(w http.ResponseWriter, r *http.Reques
 }
 
 func main() {
-	addrParam := flag.String("addr", "0.0.0.0:5000", "where to listen for connection")
+	addr_param := flag.String("addr", "0.0.0.0:5000", "where to listen for connection")
 	dir := flag.String("dir", ".", "which directory to take as a root")
 	readOnly := flag.Bool("read-only", false, "start server read only")
 
@@ -122,11 +122,11 @@ serving current %s at %s
 
     curl -T /tmp/file %s/foo/bar
 
-`, *dir, *addrParam,
-		*dir, *addrParam,
-		*dir, *addrParam,
-		*dir, *addrParam)
+`, *dir, *addr_param,
+		*dir, *addr_param,
+		*dir, *addr_param,
+		*dir, *addr_param)
 
 	http.HandleFunc("/", serve(*dir, *readOnly))
-	panic(http.ListenAndServe(*addrParam, nil))
+	panic(http.ListenAndServe(*addr_param, nil))
 }
