@@ -104,7 +104,7 @@ func serve(dir string, readOnly bool) func(w http.ResponseWriter, r *http.Reques
 func main() {
 	addr_param := flag.String("addr", "0.0.0.0:5000", "where to listen for connection")
 	dir := flag.String("dir", ".", "which directory to take as a root")
-	readOnly := flag.Bool("read-only", false, "start server read only")
+	read_only := flag.Bool("read-only", false, "start server read only")
 
 	flag.Parse()
 	fmt.Printf(`
@@ -127,6 +127,6 @@ serving current %s at %s
 		*dir, *addr_param,
 		*dir, *addr_param)
 
-	http.HandleFunc("/", serve(*dir, *readOnly))
+	http.HandleFunc("/", serve(*dir, *read_only))
 	panic(http.ListenAndServe(*addr_param, nil))
 }
