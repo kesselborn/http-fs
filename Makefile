@@ -4,13 +4,12 @@ build:
 	go build
 
 docker-image: http-fs-linux
-	docker build -t kesselborn/http-fs:standalone -f Dockerfile.standalone .
+	docker build --no-cache -t kesselborn/http-fs:standalone -f Dockerfile.standalone .
 	docker tag      kesselborn/http-fs:standalone  kesselborn/http-fs:latest
 
 	docker build -t kesselborn/http-fs:alpine     -f Dockerfile .
 
 release: docker-image
-	docker tag kesselborn/http-fs:standalone kesselborn/http-fs:standalone
 	docker push kesselborn/http-fs:standalone
 
 	docker tag kesselborn/http-fs:standalone kesselborn/http-fs:latest
