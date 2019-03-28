@@ -163,6 +163,9 @@ serving current %s at %s
 	if *tlsCert != "" && *tlsKey != "" {
 		log.Fatal(http.ListenAndServeTLS(*addr, *tlsCert, *tlsKey, nil))
 	} else {
+		if *basicAuth != "" {
+			log.Fatal("basic auth is only supported in tls mode")
+		}
 		log.Fatal(http.ListenAndServe(*addr, nil))
 	}
 }
