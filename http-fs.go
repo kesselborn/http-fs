@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strings"
 )
 
 /////////////////////////// 404 hack
@@ -41,7 +42,19 @@ func (w custom404) Write(b []byte) (int, error) {
 
 /////////////////////////// 404 hack end
 
-func serve(dir string, readOnly bool) func(w http.ResponseWriter, r *http.Request) {
+func serve(dir string, readOnly bool, basicAuth string) func(w http.ResponseWriter, r *http.Request) {
+	protected := false
+	baUsername := ""
+	baPassword := ""
+
+	if basicAuthTokens := strings.Split(basicAuth, ":"); len(basicAuthTokens) == 2 {
+		protected = true
+		baUsername = basicAuthTokens[0]
+		baPassword = basicAuthTokens[1]
+	}
+
+	log.Printf("protected mode: %t\n", protected)
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		errorOut := func(format string, a ...interface{}) {
 			msg := fmt.Sprintf(format, a...)
@@ -56,6 +69,21 @@ func serve(dir string, readOnly bool) func(w http.ResponseWriter, r *http.Reques
 		if readOnly && r.Method != "GET" {
 			http.Error(w, "http-fs was started in read-only mode", 405)
 			return
+		}
+
+		username, password, basicAuthProvided := r.BasicAuth()
+		log.Printf("0: %s=%s / %s=%s / %t", username, baUsername, password, baPassword, basicAuthProvided)
+		if protected {
+			if !basicAuthProvided {
+				http.Error(w, "authentication required", 401)
+				return
+			}
+
+			log.Printf("%s=%s / %s=%s", username, baUsername, password, baPassword)
+			if username != baUsername || password != baPassword {
+				http.Error(w, "wrong username / password", 403)
+				return
+			}
 		}
 
 		switch r.Method {
@@ -105,7 +133,9 @@ func main() {
 	addr_param := flag.String("addr", "0.0.0.0:5000", "where to listen for connection")
 	dir := flag.String("dir", ".", "which directory to take as a root")
 	read_only := flag.Bool("read-only", false, "start server read only")
-	// hallo
+	basic_auth := flag.String("basic-auth", "", "set to something like 'username:password' for basic auth")
+	tlsCert := flag.String("tls-cert", "", "https tls certificate (only necessary when running in https mode)")
+	tlsKey := flag.String("tls-key", "", "https private key (only necessary when running in https mode)")
 
 	flag.Parse()
 	fmt.Printf(`
@@ -128,6 +158,10 @@ serving current %s at %s
 		*dir, *addr_param,
 		*dir, *addr_param)
 
-	http.HandleFunc("/", serve(*dir, *read_only))
-	panic(http.ListenAndServe(*addr_param, nil))
+	http.HandleFunc("/", serve(*dir, *read_only, *basic_auth))
+	if *tlsCert != "" && *tlsKey != "" {
+		log.Fatal(http.ListenAndServeTLS(*addr_param, *tlsCert, *tlsKey, nil))
+	} else {
+		log.Fatal(http.ListenAndServe(*addr_param, nil))
+	}
 }
