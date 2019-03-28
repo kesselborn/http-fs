@@ -62,6 +62,8 @@ func serve(dir string, readOnly bool, basicAuth string) func(w http.ResponseWrit
 			http.Error(w, msg, http.StatusInternalServerError)
 		}
 
+		username, password, basicAuthProvided := r.BasicAuth()
+		r.SetBasicAuth(username, "***********")
 		logMsg := func(method string) {
 			log.Printf("%-60s| header: %s\n", method+" "+r.URL.Path, r.Header)
 		}
@@ -71,7 +73,6 @@ func serve(dir string, readOnly bool, basicAuth string) func(w http.ResponseWrit
 			return
 		}
 
-		username, password, basicAuthProvided := r.BasicAuth()
 		log.Printf("0: %s=%s / %s=%s / %t", username, baUsername, password, baPassword, basicAuthProvided)
 		if protected {
 			if !basicAuthProvided {

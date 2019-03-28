@@ -3,23 +3,11 @@ GOPATH=$(CURDIR)
 build:
 	go build
 
-docker-image: http-fs-linux
-	docker build --no-cache -t kesselborn/http-fs:standalone -f Dockerfile.standalone .
-	docker tag      kesselborn/http-fs:standalone  kesselborn/http-fs:latest
-
-	docker build -t kesselborn/http-fs:alpine     -f Dockerfile .
+docker-image: *.go *.crt *.key
+	docker build -t kesselborn/http-fs -f Dockerfile .
 
 release: docker-image
-	docker push kesselborn/http-fs:standalone
-
-	docker tag kesselborn/http-fs:standalone kesselborn/http-fs:latest
-	docker push kesselborn/http-fs:latest
-
-	docker tag kesselborn/http-fs:alpine kesselborn/http-fs:alpine
-	docker push kesselborn/http-fs:alpine
-
-http-fs-linux: http-fs.go
-	docker run --rm -v $(CURDIR):$(CURDIR) -w $(CURDIR) golang bash -c "GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o $@ ."
+	docker push kesselborn/http-fs
 
 test:
 	./tests.sh
