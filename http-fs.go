@@ -102,7 +102,7 @@ func serve(dir string, readOnly bool, basicAuth string) func(w http.ResponseWrit
 			http.Error(w, http.StatusText(204), 204)
 		case "PUT":
 			logMsg("PUT")
-			dir := dir + path.Dir(r.URL.Path)
+			dir := path.Join(dir, path.Dir(r.URL.Path))
 			if err := os.MkdirAll(dir, 0755); err != nil {
 				errorOut("error creating dir %s: %s", dir, err)
 				return
@@ -120,7 +120,7 @@ func serve(dir string, readOnly bool, basicAuth string) func(w http.ResponseWrit
 				return
 			}
 
-			if err := os.Rename(f.Name(), dir+r.URL.Path); err != nil {
+			if err := os.Rename(f.Name(), path.Join(dir, path.Base(r.URL.Path))); err != nil {
 				errorOut("error storing file %s: %s", f.Name(), err)
 				return
 			}
@@ -131,10 +131,10 @@ func serve(dir string, readOnly bool, basicAuth string) func(w http.ResponseWrit
 }
 
 func main() {
-	addr_param := flag.String("addr", "0.0.0.0:5000", "where to listen for connection")
+	addr := flag.String("addr", "0.0.0.0:5000", "where to listen for connection")
 	dir := flag.String("dir", ".", "which directory to take as a root")
-	read_only := flag.Bool("read-only", false, "start server read only")
-	basic_auth := flag.String("basic-auth", "", "set to something like 'username:password' for basic auth")
+	readOnly := flag.Bool("read-only", false, "start server read only")
+	basicAuth := flag.String("basic-auth", "", "set to something like 'username:password' for basic auth")
 	tlsCert := flag.String("tls-cert", "", "https tls certificate (only necessary when running in https mode)")
 	tlsKey := flag.String("tls-key", "", "https private key (only necessary when running in https mode)")
 
@@ -154,15 +154,15 @@ serving current %s at %s
 
     curl -T /tmp/file %s/foo/bar
 
-`, *dir, *addr_param,
-		*dir, *addr_param,
-		*dir, *addr_param,
-		*dir, *addr_param)
+`, *dir, *addr,
+		*dir, *addr,
+		*dir, *addr,
+		*dir, *addr)
 
-	http.HandleFunc("/", serve(*dir, *read_only, *basic_auth))
+	http.HandleFunc("/", serve(*dir, *readOnly, *basicAuth))
 	if *tlsCert != "" && *tlsKey != "" {
-		log.Fatal(http.ListenAndServeTLS(*addr_param, *tlsCert, *tlsKey, nil))
+		log.Fatal(http.ListenAndServeTLS(*addr, *tlsCert, *tlsKey, nil))
 	} else {
-		log.Fatal(http.ListenAndServe(*addr_param, nil))
+		log.Fatal(http.ListenAndServe(*addr, nil))
 	}
 }
