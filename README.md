@@ -19,3 +19,4 @@ insecure http server to get/put/delete files in a directory
     - upload file to /tmp/foo/bar:
 
         curl -T /tmp/file localhost:5000/foo/bar
+hallo
