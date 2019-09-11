@@ -1,0 +1,5 @@
+FROM alpine
+ADD http-fs-linux /http-fs
+RUN sh -c "echo '<html><body><h1>hello world</h1></body></html>' > /tmp/index.html"
+EXPOSE 5000
+CMD ["/http-fs", "-addr=0.0.0.0:5000", "-dir=/tmp"]
